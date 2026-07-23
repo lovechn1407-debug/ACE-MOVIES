@@ -6,11 +6,11 @@ import Footer from '@/components/Footer';
 import ToastNotification from '@/components/ToastNotification';
 import { 
   Shield, Layers, Film, Plus, Search, Check, Trash2, Edit, 
-  Share2, Sparkles, RefreshCw, Star, Crown, X, Settings, Server
+  Share2, Sparkles, RefreshCw, Star, Crown, X, Server, Hash
 } from 'lucide-react';
 
 export default function AdminPage() {
-  const [activeTab, setActiveTab] = useState('sections'); // 'sections' | 'movies' | 'settings'
+  const [activeTab, setActiveTab] = useState('sections'); // 'sections' | 'movies'
   const [sections, setSections] = useState([]);
   const [movies, setMovies] = useState([]);
   const [heroMovie, setHeroMovie] = useState(null);
@@ -28,6 +28,11 @@ export default function AdminPage() {
   const [tmdbSearching, setTmdbSearching] = useState(false);
   const [selectedTmdbMovie, setSelectedTmdbMovie] = useState(null);
   const [fetchingDetails, setFetchingDetails] = useState(false);
+
+  // IMDB ID Modal State
+  const [showImdbModal, setShowImdbModal] = useState(false);
+  const [imdbInput, setImdbInput] = useState('');
+  const [imdbFetching, setImdbFetching] = useState(false);
 
   const [showManualModal, setShowManualModal] = useState(false);
   const [editingMovieId, setEditingMovieId] = useState(null);
@@ -75,7 +80,7 @@ export default function AdminPage() {
       setApiProvider(setSetting.apiProvider || 'auto');
     } catch (err) {
       console.error('Error loading admin data:', err);
-    } finally {
+    } fontally: {
       setLoading(false);
     }
   };
@@ -187,7 +192,7 @@ export default function AdminPage() {
     }
   };
 
-  // --- MOVIE SEARCH & SELECTION HANDLERS ---
+  // --- MOVIE SEARCH HANDLERS ---
   const handleTmdbSearch = async (e) => {
     e.preventDefault();
     if (!tmdbQuery.trim()) return;
@@ -234,6 +239,48 @@ export default function AdminPage() {
     }
   };
 
+  // --- FETCH MOVIE BY IMDB ID HANDLER ---
+  const handleFetchByImdbId = async (e) => {
+    if (e) e.preventDefault();
+    if (!imdbInput.trim()) {
+      showToast('Please enter a valid IMDB ID (e.g. tt10872600)');
+      return;
+    }
+    try {
+      setImdbFetching(true);
+      const res = await fetch(`/api/tmdb/imdb?id=${encodeURIComponent(imdbInput.trim())}`);
+      const fullDetails = await res.json();
+
+      if (fullDetails && fullDetails.title) {
+        setSelectedTmdbMovie(fullDetails);
+        setMovieForm({
+          tmdbId: fullDetails.tmdbId,
+          title: fullDetails.title || '',
+          description: fullDetails.description || '',
+          releaseYear: fullDetails.releaseYear || '',
+          rating: fullDetails.rating || '8.5',
+          poster: fullDetails.poster || '',
+          backdrop: fullDetails.backdrop || '',
+          logo: fullDetails.logo || '',
+          languages: fullDetails.languages || 'English',
+          cast: fullDetails.cast || '',
+          genres: fullDetails.genres || [],
+          sectionId: '',
+          playLink: fullDetails.trailerUrl || '',
+          extraButtons: [{ label: 'Watch 1080p HD', url: fullDetails.trailerUrl || '' }]
+        });
+        showToast(`Fetched OMDB movie details for "${fullDetails.title}"`);
+      } else {
+        showToast('Movie not found on OMDB for this IMDB ID');
+      }
+    } catch (err) {
+      console.error(err);
+      showToast('Error fetching movie by IMDB ID');
+    } finally {
+      setImdbFetching(false);
+    }
+  };
+
   // --- MOVIE SAVE & EDIT HANDLERS ---
   const handleSaveMovieForm = async (e) => {
     e.preventDefault();
@@ -269,6 +316,7 @@ export default function AdminPage() {
         setMovies(data.movies);
         showToast(editingMovieId ? 'Movie updated!' : 'Movie added to database!');
         setShowTmdbModal(false);
+        setShowImdbModal(false);
         setShowManualModal(false);
         setSelectedTmdbMovie(null);
         setEditingMovieId(null);
@@ -394,7 +442,7 @@ export default function AdminPage() {
                 Admin Management Control
               </h1>
               <p className="text-xs text-gray-400">
-                Configure sections, set movie API source, upload TMDB / manual movies, customize play links & set Top 1 Hero movie.
+                Configure sections, add movies by IMDB ID or API search, customize play links & set Top 1 Hero movie.
               </p>
             </div>
           </div>
@@ -578,7 +626,7 @@ export default function AdminPage() {
               <div>
                 <h2 className="text-lg font-bold text-white">Movie Database Configuration</h2>
                 <p className="text-xs text-gray-400">
-                  Add movies from active API provider ({apiProvider.toUpperCase()}) or manually.
+                  Add movies by IMDB ID, API Search ({apiProvider.toUpperCase()}), or manually.
                 </p>
               </div>
 
@@ -591,6 +639,19 @@ export default function AdminPage() {
                   <span>Edit Top 1 Hero Movie</span>
                 </button>
 
+                {/* Add Movie by IMDB ID Button */}
+                <button
+                  onClick={() => {
+                    setImdbInput('');
+                    setSelectedTmdbMovie(null);
+                    setShowImdbModal(true);
+                  }}
+                  className="flex items-center gap-2 px-4 py-2.5 rounded-xl bg-amber-600 hover:bg-amber-700 text-white font-semibold text-xs shadow-lg shadow-amber-900/40 transition-all"
+                >
+                  <Hash className="w-4 h-4" />
+                  <span>Add Movie by IMDB ID (OMDB)</span>
+                </button>
+
                 <button
                   onClick={() => {
                     setTmdbQuery('');
@@ -601,7 +662,7 @@ export default function AdminPage() {
                   className="flex items-center gap-2 px-4 py-2.5 rounded-xl bg-[#e50914] hover:bg-red-600 text-white font-semibold text-xs shadow-lg shadow-red-900/40 transition-all"
                 >
                   <Search className="w-4 h-4" />
-                  <span>Add Movie from Database ({apiProvider.toUpperCase()})</span>
+                  <span>Add Movie by Name Search</span>
                 </button>
 
                 <button
@@ -749,7 +810,186 @@ export default function AdminPage() {
         </div>
       )}
 
-      {/* --- MODAL 2: TMDB/OMDB MOVIE SEARCH MODAL --- */}
+      {/* --- MODAL 2: ADD MOVIE BY IMDB ID MODAL (OMDB) --- */}
+      {showImdbModal && (
+        <div className="fixed inset-0 z-50 bg-black/85 backdrop-blur-md flex items-center justify-center p-4 overflow-y-auto">
+          <div className="bg-[#12131a] border border-white/15 rounded-2xl max-w-2xl w-full max-h-[90vh] overflow-y-auto p-6 space-y-6">
+            
+            <div className="flex items-center justify-between border-b border-white/10 pb-3">
+              <div className="flex items-center gap-2">
+                <Hash className="w-5 h-5 text-amber-400" />
+                <h3 className="text-lg font-bold text-white">Add Movie by IMDB ID (OMDB API)</h3>
+              </div>
+              <button onClick={() => setShowImdbModal(false)} className="text-gray-400 hover:text-white">
+                <X className="w-5 h-5" />
+              </button>
+            </div>
+
+            <div className="space-y-2">
+              <p className="text-xs text-gray-400">
+                Enter an IMDB ID (e.g. <code className="text-amber-400 font-mono">tt10872600</code> for Spider-Man: No Way Home, <code className="text-amber-400 font-mono">tt0816692</code> for Interstellar, <code className="text-amber-400 font-mono">tt0468569</code> for The Dark Knight).
+              </p>
+              
+              {/* Quick sample pills */}
+              <div className="flex flex-wrap gap-2 text-[11px]">
+                <button
+                  type="button"
+                  onClick={() => setImdbInput('tt10872600')}
+                  className="px-2.5 py-1 rounded-md bg-white/10 hover:bg-white/20 text-gray-300 border border-white/10"
+                >
+                  tt10872600 (Spider-Man)
+                </button>
+                <button
+                  type="button"
+                  onClick={() => setImdbInput('tt0816692')}
+                  className="px-2.5 py-1 rounded-md bg-white/10 hover:bg-white/20 text-gray-300 border border-white/10"
+                >
+                  tt0816692 (Interstellar)
+                </button>
+                <button
+                  type="button"
+                  onClick={() => setImdbInput('tt0468569')}
+                  className="px-2.5 py-1 rounded-md bg-white/10 hover:bg-white/20 text-gray-300 border border-white/10"
+                >
+                  tt0468569 (The Dark Knight)
+                </button>
+              </div>
+            </div>
+
+            {/* Input Form */}
+            <form onSubmit={handleFetchByImdbId} className="flex gap-3">
+              <input
+                type="text"
+                placeholder="Enter IMDB ID (e.g. tt10872600)..."
+                value={imdbInput}
+                onChange={(e) => setImdbInput(e.target.value)}
+                className="flex-1 bg-black/60 border border-white/15 rounded-xl px-4 py-3 text-sm text-white focus:outline-none focus:border-amber-400 font-mono"
+              />
+              <button
+                type="submit"
+                className="px-6 py-3 rounded-xl bg-amber-600 hover:bg-amber-700 text-white text-sm font-bold flex items-center gap-2 shadow-lg"
+              >
+                {imdbFetching ? <RefreshCw className="w-4 h-4 animate-spin" /> : <Search className="w-4 h-4" />}
+                Fetch OMDB Details
+              </button>
+            </form>
+
+            {/* Fetched Movie Details Form */}
+            {selectedTmdbMovie && (
+              <form onSubmit={handleSaveMovieForm} className="space-y-5 border-t border-white/10 pt-5">
+                <div className="flex items-center gap-4 bg-white/5 p-4 rounded-xl border border-white/10">
+                  {selectedTmdbMovie.poster && (
+                    <img src={selectedTmdbMovie.poster} alt={selectedTmdbMovie.title} className="w-16 h-24 object-cover rounded-lg" />
+                  )}
+                  <div className="space-y-1">
+                    <div className="flex items-center gap-2">
+                      <h4 className="text-lg font-bold text-white">{selectedTmdbMovie.title} ({selectedTmdbMovie.releaseYear})</h4>
+                      <span className="text-[10px] px-2 py-0.5 rounded bg-amber-400/20 text-amber-400 border border-amber-400/30 font-bold">
+                        IMDB: {selectedTmdbMovie.rating || '8.2'}
+                      </span>
+                    </div>
+                    <p className="text-xs text-gray-400 line-clamp-2">{selectedTmdbMovie.description}</p>
+                    <p className="text-[11px] text-gray-300">Cast: {selectedTmdbMovie.cast}</p>
+                  </div>
+                </div>
+
+                {/* Section Selector */}
+                <div>
+                  <label className="block text-xs font-semibold text-gray-300 mb-1">Add to Section</label>
+                  <select
+                    value={movieForm.sectionId}
+                    onChange={(e) => setMovieForm({ ...movieForm, sectionId: e.target.value })}
+                    className="w-full bg-black/60 border border-white/15 rounded-xl px-4 py-2.5 text-sm text-white focus:outline-none focus:border-amber-400"
+                  >
+                    <option value="">No Section (Individual)</option>
+                    {sections.map((s) => (
+                      <option key={s.id} value={s.id}>
+                        {s.name} {s.visible ? '(Visible)' : '(Hidden)'}
+                      </option>
+                    ))}
+                  </select>
+                </div>
+
+                {/* Play Buttons Config */}
+                <div className="space-y-3 bg-black/40 p-4 rounded-xl border border-white/10">
+                  <h4 className="text-xs font-bold text-amber-400 uppercase tracking-wider">Configure Play Links & Custom Buttons</h4>
+                  
+                  <div>
+                    <label className="block text-xs font-semibold text-gray-300 mb-1">Main "Click to Play" Link Input</label>
+                    <input
+                      type="text"
+                      placeholder="Enter stream link or video embed URL (YouTube/MP4/HLS)..."
+                      value={movieForm.playLink}
+                      onChange={(e) => setMovieForm({ ...movieForm, playLink: e.target.value })}
+                      className="w-full bg-black border border-white/15 rounded-xl px-4 py-2.5 text-sm text-white focus:outline-none focus:border-amber-400"
+                    />
+                  </div>
+
+                  {/* Additional Buttons */}
+                  <div className="space-y-2 pt-2">
+                    <div className="flex items-center justify-between">
+                      <label className="text-xs font-semibold text-gray-300">Additional Streaming Mirror Buttons</label>
+                      <button
+                        type="button"
+                        onClick={addExtraButtonField}
+                        className="text-xs font-bold text-amber-400 hover:underline flex items-center gap-1"
+                      >
+                        <Plus className="w-3.5 h-3.5" />
+                        Add More Button
+                      </button>
+                    </div>
+
+                    {(movieForm.extraButtons || []).map((btn, idx) => (
+                      <div key={idx} className="flex gap-2 items-center">
+                        <input
+                          type="text"
+                          placeholder="Button Label (e.g. Watch 1080p, Server 2)"
+                          value={btn.label}
+                          onChange={(e) => updateExtraButton(idx, 'label', e.target.value)}
+                          className="w-1/3 bg-black border border-white/15 rounded-xl px-3 py-2 text-xs text-white"
+                        />
+                        <input
+                          type="text"
+                          placeholder="Stream Link URL"
+                          value={btn.url}
+                          onChange={(e) => updateExtraButton(idx, 'url', e.target.value)}
+                          className="flex-1 bg-black border border-white/15 rounded-xl px-3 py-2 text-xs text-white"
+                        />
+                        <button
+                          type="button"
+                          onClick={() => removeExtraButton(idx)}
+                          className="p-2 text-gray-400 hover:text-red-500"
+                        >
+                          <X className="w-4 h-4" />
+                        </button>
+                      </div>
+                    ))}
+                  </div>
+                </div>
+
+                <div className="flex justify-end gap-3 pt-3">
+                  <button
+                    type="button"
+                    onClick={() => setShowImdbModal(false)}
+                    className="px-5 py-2.5 rounded-xl bg-white/10 text-gray-300 text-xs font-semibold"
+                  >
+                    Cancel
+                  </button>
+                  <button
+                    type="submit"
+                    className="px-6 py-2.5 rounded-xl bg-amber-600 text-white text-xs font-bold hover:bg-amber-700 shadow-lg"
+                  >
+                    Save & Publish Movie
+                  </button>
+                </div>
+              </form>
+            )}
+
+          </div>
+        </div>
+      )}
+
+      {/* --- MODAL 3: TMDB/OMDB NAME SEARCH MODAL --- */}
       {showTmdbModal && (
         <div className="fixed inset-0 z-50 bg-black/85 backdrop-blur-md flex items-center justify-center p-4 overflow-y-auto">
           <div className="bg-[#12131a] border border-white/15 rounded-2xl max-w-3xl w-full max-h-[90vh] overflow-y-auto p-6 space-y-6">
@@ -757,7 +997,7 @@ export default function AdminPage() {
             <div className="flex items-center justify-between border-b border-white/10 pb-3">
               <div className="flex items-center gap-2">
                 <Sparkles className="w-5 h-5 text-[#e50914]" />
-                <h3 className="text-lg font-bold text-white">Add Movie from API Database</h3>
+                <h3 className="text-lg font-bold text-white">Add Movie by Name Search</h3>
                 <span className="px-2.5 py-0.5 rounded-full bg-[#e50914]/20 border border-[#e50914]/40 text-[#e50914] text-xs font-bold uppercase">
                   Source: {apiProvider.toUpperCase()}
                 </span>
@@ -785,7 +1025,7 @@ export default function AdminPage() {
               </button>
             </form>
 
-            {/* Search Results Picker with API Source Tag */}
+            {/* Search Results Picker */}
             {tmdbResults.length > 0 && !selectedTmdbMovie && (
               <div className="space-y-3">
                 <div className="flex items-center justify-between">
@@ -944,7 +1184,7 @@ export default function AdminPage() {
         </div>
       )}
 
-      {/* --- MODAL 3: MANUAL MOVIE ADD / EDIT MODAL --- */}
+      {/* --- MODAL 4: MANUAL MOVIE ADD / EDIT MODAL --- */}
       {showManualModal && (
         <div className="fixed inset-0 z-50 bg-black/85 backdrop-blur-md flex items-center justify-center p-4 overflow-y-auto">
           <div className="bg-[#12131a] border border-white/15 rounded-2xl max-w-2xl w-full max-h-[90vh] overflow-y-auto p-6 space-y-5">
@@ -1109,7 +1349,7 @@ export default function AdminPage() {
         </div>
       )}
 
-      {/* --- MODAL 4: EDIT TOP 1 HERO MOVIE MODAL --- */}
+      {/* --- MODAL 5: EDIT TOP 1 HERO MOVIE MODAL --- */}
       {showTop1Modal && (
         <div className="fixed inset-0 z-50 bg-black/85 backdrop-blur-md flex items-center justify-center p-4">
           <div className="bg-[#12131a] border border-white/15 rounded-2xl max-w-lg w-full p-6 space-y-4">
