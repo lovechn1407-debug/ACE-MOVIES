@@ -7,9 +7,9 @@ export async function GET(request, { params }) {
   const rawId = resolvedParams.id;
   const id = decodeURIComponent(rawId);
 
-  let movie = getMovieById(id);
+  let movie = await getMovieById(id);
   
-  // Dynamic fallback: If movie is not in store, fetch on demand by TMDB/IMDB ID!
+  // Dynamic fallback: If movie is not in Firebase store, fetch on demand by TMDB/IMDB ID!
   if (!movie && id) {
     try {
       const fetchedDetails = await getTMDBMovieDetails(id);
@@ -38,7 +38,7 @@ export async function PUT(request, { params }) {
     const id = decodeURIComponent(resolvedParams.id);
     const updateData = await request.json();
     updateData.id = id;
-    const movies = saveMovie(updateData);
+    const movies = await saveMovie(updateData);
     return NextResponse.json({ success: true, movies });
   } catch (err) {
     return NextResponse.json({ error: err.message }, { status: 500 });
@@ -48,6 +48,6 @@ export async function PUT(request, { params }) {
 export async function DELETE(request, { params }) {
   const resolvedParams = await params;
   const id = decodeURIComponent(resolvedParams.id);
-  const movies = deleteMovie(id);
+  const movies = await deleteMovie(id);
   return NextResponse.json({ success: true, movies });
 }

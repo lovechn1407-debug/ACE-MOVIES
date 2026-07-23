@@ -7,7 +7,8 @@ import MovieSectionRow from '@/components/MovieSectionRow';
 import MovieCard from '@/components/MovieCard';
 import Footer from '@/components/Footer';
 import ToastNotification from '@/components/ToastNotification';
-import { Film, Sparkles } from 'lucide-react';
+import { Film, Sparkles, PlusCircle } from 'lucide-react';
+import Link from 'next/link';
 
 export default function HomePage() {
   const [heroMovie, setHeroMovie] = useState(null);
@@ -71,7 +72,7 @@ export default function HomePage() {
       {loading ? (
         <div className="flex-1 flex flex-col items-center justify-center min-h-[70vh] space-y-4">
           <div className="w-12 h-12 border-4 border-[#e50914] border-t-transparent rounded-full animate-spin" />
-          <p className="text-gray-400 text-sm font-medium animate-pulse">Loading Movies Platform...</p>
+          <p className="text-gray-400 text-sm font-medium animate-pulse">Connecting to Realtime Database...</p>
         </div>
       ) : searchQuery.trim() ? (
         /* Search Results View */
@@ -101,7 +102,28 @@ export default function HomePage() {
         /* Standard Netflix Homepage View */
         <main className="flex-1 pb-16">
           {/* Top 1 Hero Movie Banner */}
-          {heroMovie && <HeroBanner movie={heroMovie} onToast={showToast} />}
+          {heroMovie ? (
+            <HeroBanner movie={heroMovie} onToast={showToast} />
+          ) : (
+            <div className="pt-28 pb-12 px-4 sm:px-8 max-w-4xl mx-auto text-center space-y-4">
+              <div className="w-16 h-16 rounded-2xl bg-[#e50914]/20 border border-[#e50914]/40 flex items-center justify-center mx-auto">
+                <Film className="w-8 h-8 text-[#e50914]" />
+              </div>
+              <h1 className="text-3xl sm:text-4xl font-extrabold text-white">Welcome to ACE Movies</h1>
+              <p className="text-gray-400 text-sm max-w-md mx-auto">
+                Firebase Realtime Database is connected. Use the Admin Panel to search, add movies, and create sections.
+              </p>
+              <div className="pt-2">
+                <Link
+                  href="/admin"
+                  className="inline-flex items-center gap-2 px-6 py-3 rounded-xl bg-[#e50914] text-white font-bold hover:bg-red-600 transition-all shadow-lg shadow-red-900/40"
+                >
+                  <PlusCircle className="w-5 h-5" />
+                  <span>Go to Admin Panel to Add Movies</span>
+                </Link>
+              </div>
+            </div>
+          )}
 
           {/* Dynamic Movie Sections */}
           <div className="space-y-4 -mt-10 relative z-30">
