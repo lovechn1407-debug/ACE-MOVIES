@@ -53,6 +53,29 @@ export default function MovieDetailPage() {
     setTimeout(() => setCopied(false), 2500);
   };
 
+  // Helper to ensure URLs always have a valid protocol (https://)
+  const formatLinkUrl = (url) => {
+    if (!url || url === '#' || url.trim().length === 0) return null;
+    const trimmed = url.trim();
+    if (trimmed.startsWith('http://') || trimmed.startsWith('https://') || trimmed.startsWith('//')) {
+      return trimmed;
+    }
+    return `https://${trimmed}`;
+  };
+
+  const handleOpenLink = (e, url) => {
+    if (e) {
+      e.preventDefault();
+      e.stopPropagation();
+    }
+    const targetUrl = formatLinkUrl(url);
+    if (!targetUrl) {
+      showToast('No valid URL configured for this link.');
+      return;
+    }
+    window.open(targetUrl, '_blank', 'noopener,noreferrer');
+  };
+
   if (loading) {
     return (
       <div className="min-h-screen flex flex-col bg-[#08080c] text-white">
@@ -100,7 +123,7 @@ export default function MovieDetailPage() {
   }
 
   const backdropSrc = movie.backdrop || movie.poster || null;
-  const primaryUrl = movie.playLink || activePlayUrl || '#';
+  const primaryUrl = movie.playLink || activePlayUrl || '';
   const cardButtonType = movie.cardButtonType || 'play'; // 'play' | 'terabox' | 'gdrive' | 'mega'
 
   return (
@@ -146,49 +169,45 @@ export default function MovieDetailPage() {
           {/* Center Custom Overlay Button (50+ Radius / rounded-full) */}
           <div className="absolute inset-0 z-20 flex items-center justify-center p-4">
             {cardButtonType === 'terabox' ? (
-              <a
-                href={primaryUrl}
-                target="_blank"
-                rel="noopener noreferrer"
-                className="flex items-center gap-3 px-8 py-3.5 rounded-full bg-[#0084ff] hover:bg-[#0073e6] text-white font-extrabold text-sm sm:text-base shadow-2xl shadow-blue-600/70 transition-all transform hover:scale-105 border border-blue-400/50"
+              <button
+                type="button"
+                onClick={(e) => handleOpenLink(e, primaryUrl)}
+                className="flex items-center gap-3 px-8 py-3.5 rounded-full bg-[#0084ff] hover:bg-[#0073e6] text-white font-extrabold text-sm sm:text-base shadow-2xl shadow-blue-600/70 transition-all transform hover:scale-105 border border-blue-400/50 cursor-pointer"
               >
                 <Cloud className="w-5 h-5 fill-white" />
                 <span>Open with TeraBox</span>
                 <ExternalLink className="w-4 h-4 ml-1 opacity-80" />
-              </a>
+              </button>
             ) : cardButtonType === 'gdrive' ? (
-              <a
-                href={primaryUrl}
-                target="_blank"
-                rel="noopener noreferrer"
-                className="flex items-center gap-3 px-8 py-3.5 rounded-full bg-[#0f9d58] hover:bg-[#0b8043] text-white font-extrabold text-sm sm:text-base shadow-2xl shadow-green-600/70 transition-all transform hover:scale-105 border border-green-400/50"
+              <button
+                type="button"
+                onClick={(e) => handleOpenLink(e, primaryUrl)}
+                className="flex items-center gap-3 px-8 py-3.5 rounded-full bg-[#0f9d58] hover:bg-[#0b8043] text-white font-extrabold text-sm sm:text-base shadow-2xl shadow-green-600/70 transition-all transform hover:scale-105 border border-green-400/50 cursor-pointer"
               >
                 <HardDrive className="w-5 h-5" />
                 <span>Open with Google Drive</span>
                 <ExternalLink className="w-4 h-4 ml-1 opacity-80" />
-              </a>
+              </button>
             ) : cardButtonType === 'mega' ? (
-              <a
-                href={primaryUrl}
-                target="_blank"
-                rel="noopener noreferrer"
-                className="flex items-center gap-3 px-8 py-3.5 rounded-full bg-[#d9272e] hover:bg-[#b81d23] text-white font-extrabold text-sm sm:text-base shadow-2xl shadow-red-600/70 transition-all transform hover:scale-105 border border-red-400/50"
+              <button
+                type="button"
+                onClick={(e) => handleOpenLink(e, primaryUrl)}
+                className="flex items-center gap-3 px-8 py-3.5 rounded-full bg-[#d9272e] hover:bg-[#b81d23] text-white font-extrabold text-sm sm:text-base shadow-2xl shadow-red-600/70 transition-all transform hover:scale-105 border border-red-400/50 cursor-pointer"
               >
                 <Shield className="w-5 h-5" />
                 <span>Open with Mega</span>
                 <ExternalLink className="w-4 h-4 ml-1 opacity-80" />
-              </a>
+              </button>
             ) : (
               /* Default Red Play Icon Circle (50+ Radius) */
-              <a
-                href={primaryUrl}
-                target="_blank"
-                rel="noopener noreferrer"
-                className="w-16 h-16 sm:w-20 sm:h-20 rounded-full bg-[#e50914] hover:bg-[#f6121d] text-white flex items-center justify-center shadow-2xl shadow-red-900/80 transition-all transform hover:scale-110 border-2 border-white/20"
+              <button
+                type="button"
+                onClick={(e) => handleOpenLink(e, primaryUrl)}
+                className="w-16 h-16 sm:w-20 sm:h-20 rounded-full bg-[#e50914] hover:bg-[#f6121d] text-white flex items-center justify-center shadow-2xl shadow-red-900/80 transition-all transform hover:scale-110 border-2 border-white/20 cursor-pointer"
                 title="Click to Play"
               >
                 <Play className="w-8 h-8 sm:w-10 sm:h-10 fill-white ml-1" />
-              </a>
+              </button>
             )}
           </div>
         </div>
@@ -196,7 +215,7 @@ export default function MovieDetailPage() {
         {/* Content Container - Clean & Free of Container Background Boxes */}
         <div className="max-w-7xl mx-auto px-4 sm:px-8 lg:px-16 grid grid-cols-1 lg:grid-cols-12 gap-8">
           
-          {/* Main Details Column (No Card Boxes!) */}
+          {/* Main Details Column */}
           <div className="lg:col-span-8 space-y-6">
             
             {/* Title & Metadata Header */}
@@ -243,8 +262,9 @@ export default function MovieDetailPage() {
               {/* Share Direct Link Button */}
               <div className="pt-1">
                 <button
+                  type="button"
                   onClick={handleShare}
-                  className="inline-flex items-center gap-2 px-4 py-2 rounded-xl bg-white/10 hover:bg-white/20 text-gray-200 text-xs font-semibold transition-all border border-white/10"
+                  className="inline-flex items-center gap-2 px-4 py-2 rounded-xl bg-white/10 hover:bg-white/20 text-gray-200 text-xs font-semibold transition-all border border-white/10 cursor-pointer"
                 >
                   <Share2 className="w-4 h-4 text-[#e50914]" />
                   <span>{copied ? 'Link Copied!' : 'Share Direct Link'}</span>
@@ -252,7 +272,7 @@ export default function MovieDetailPage() {
               </div>
             </div>
 
-            {/* Custom Streaming & Download Server Link Buttons (Clean Layout, No Container Box!) */}
+            {/* Custom Streaming & Download Server Link Buttons */}
             <div className="space-y-4 pt-2">
               <h3 className="text-lg font-bold text-white flex items-center gap-2">
                 <Play className="w-5 h-5 text-[#e50914] fill-[#e50914]" />
@@ -262,12 +282,11 @@ export default function MovieDetailPage() {
               {allButtons.length > 0 ? (
                 <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
                   {allButtons.map((btn, idx) => (
-                    <a
+                    <button
                       key={idx}
-                      href={btn.url}
-                      target="_blank"
-                      rel="noopener noreferrer"
-                      className={`flex items-center justify-between p-4 rounded-2xl text-sm font-semibold transition-all transform hover:scale-[1.02] ${
+                      type="button"
+                      onClick={(e) => handleOpenLink(e, btn.url)}
+                      className={`flex items-center justify-between p-4 rounded-2xl text-sm font-semibold transition-all transform hover:scale-[1.02] cursor-pointer text-left ${
                         btn.isPrimary
                           ? 'bg-[#e50914] text-white shadow-xl shadow-red-900/40 hover:bg-[#f6121d]'
                           : 'bg-white/10 text-gray-200 hover:bg-white/20 border border-white/10'
@@ -283,7 +302,7 @@ export default function MovieDetailPage() {
                         </span>
                         <ExternalLink className="w-3.5 h-3.5 opacity-80" />
                       </div>
-                    </a>
+                    </button>
                   ))}
                 </div>
               ) : (
@@ -291,7 +310,7 @@ export default function MovieDetailPage() {
               )}
             </div>
 
-            {/* Synopsis Section (Clean Layout, No Container Box!) */}
+            {/* Synopsis Section */}
             <div className="space-y-3 pt-6 border-t border-white/10">
               <h3 className="text-lg font-bold text-white">Movie Synopsis</h3>
               <p className="text-sm text-gray-300 leading-relaxed">{movie.description}</p>
