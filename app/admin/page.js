@@ -51,6 +51,7 @@ export default function AdminPage() {
     languages: 'English',
     cast: '',
     sectionId: '',
+    cardButtonType: 'play',
     playLink: '',
     extraButtons: [{ label: '', url: '' }]
   });
@@ -228,6 +229,7 @@ export default function AdminPage() {
         cast: fullDetails.cast || '',
         genres: fullDetails.genres || [],
         sectionId: '',
+        cardButtonType: fullDetails.cardButtonType || 'play',
         playLink: fullDetails.trailerUrl || '',
         extraButtons: [{ label: 'Watch 1080p HD', url: fullDetails.trailerUrl || '' }]
       });
@@ -266,6 +268,7 @@ export default function AdminPage() {
           cast: fullDetails.cast || '',
           genres: fullDetails.genres || [],
           sectionId: '',
+          cardButtonType: fullDetails.cardButtonType || 'play',
           playLink: fullDetails.trailerUrl || '',
           extraButtons: [{ label: 'Watch 1080p HD', url: fullDetails.trailerUrl || '' }]
         });
@@ -343,6 +346,7 @@ export default function AdminPage() {
       languages: movie.languages || 'English',
       cast: movie.cast || '',
       sectionId: movie.sectionId || '',
+      cardButtonType: movie.cardButtonType || 'play',
       playLink: movie.playLink || '',
       extraButtons: movie.extraButtons && movie.extraButtons.length > 0 
         ? movie.extraButtons 
@@ -401,6 +405,7 @@ export default function AdminPage() {
       languages: 'English',
       cast: '',
       sectionId: '',
+      cardButtonType: 'play',
       playLink: '',
       extraButtons: [{ label: '', url: '' }]
     });
@@ -915,6 +920,20 @@ export default function AdminPage() {
                   <h4 className="text-xs font-bold text-amber-400 uppercase tracking-wider">Configure Play Links & Custom Buttons</h4>
                   
                   <div>
+                    <label className="block text-xs font-semibold text-gray-300 mb-1">Landscape Card Overlay Center Button</label>
+                    <select
+                      value={movieForm.cardButtonType || 'play'}
+                      onChange={(e) => setMovieForm({ ...movieForm, cardButtonType: e.target.value })}
+                      className="w-full bg-black border border-white/15 rounded-xl px-4 py-2 text-xs text-white focus:outline-none focus:border-amber-400 mb-3"
+                    >
+                      <option value="play">Play Icon Circle (Red)</option>
+                      <option value="terabox">Open with TeraBox (Blue)</option>
+                      <option value="gdrive">Open with Google Drive (Green)</option>
+                      <option value="mega">Open with Mega (Red)</option>
+                    </select>
+                  </div>
+
+                  <div>
                     <label className="block text-xs font-semibold text-gray-300 mb-1">Main "Click to Play" Link Input</label>
                     <input
                       type="text"
@@ -1110,6 +1129,20 @@ export default function AdminPage() {
                   <h4 className="text-xs font-bold text-[#e50914] uppercase tracking-wider">Configure Play Links & Custom Buttons</h4>
                   
                   <div>
+                    <label className="block text-xs font-semibold text-gray-300 mb-1">Landscape Card Overlay Center Button</label>
+                    <select
+                      value={movieForm.cardButtonType || 'play'}
+                      onChange={(e) => setMovieForm({ ...movieForm, cardButtonType: e.target.value })}
+                      className="w-full bg-black border border-white/15 rounded-xl px-4 py-2 text-xs text-white focus:outline-none focus:border-[#e50914] mb-3"
+                    >
+                      <option value="play">Play Icon Circle (Red)</option>
+                      <option value="terabox">Open with TeraBox (Blue)</option>
+                      <option value="gdrive">Open with Google Drive (Green)</option>
+                      <option value="mega">Open with Mega (Red)</option>
+                    </select>
+                  </div>
+
+                  <div>
                     <label className="block text-xs font-semibold text-gray-300 mb-1">Main "Click to Play" Link Input</label>
                     <input
                       type="text"
@@ -1286,6 +1319,20 @@ export default function AdminPage() {
 
               {/* Play Link Inputs */}
               <div className="space-y-3 bg-black/40 p-4 rounded-xl border border-white/10">
+                <div>
+                  <label className="block text-xs font-semibold text-gray-300 mb-1">Landscape Card Overlay Center Button</label>
+                  <select
+                    value={movieForm.cardButtonType || 'play'}
+                    onChange={(e) => setMovieForm({ ...movieForm, cardButtonType: e.target.value })}
+                    className="w-full bg-black border border-white/15 rounded-xl px-4 py-2 text-xs text-white focus:outline-none focus:border-[#e50914] mb-3"
+                  >
+                    <option value="play">Play Icon Circle (Red)</option>
+                    <option value="terabox">Open with TeraBox (Blue)</option>
+                    <option value="gdrive">Open with Google Drive (Green)</option>
+                    <option value="mega">Open with Mega (Red)</option>
+                  </select>
+                </div>
+
                 <label className="block text-xs font-semibold text-gray-300">Main "Click to Play" Link Input</label>
                 <input
                   type="text"
