@@ -50,6 +50,13 @@ export default function HomePage() {
   }, []);
 
   const visibleSections = sections.filter(s => s.visible);
+
+  // All Movies fallback section to guarantee every single uploaded movie displays publicly
+  const allMoviesSection = {
+    id: 'sec-all-movies',
+    name: 'All Movies & Latest Uploads',
+    visible: true
+  };
   
   // Filter movies if search query active
   const filteredMovies = searchQuery.trim()
@@ -98,7 +105,7 @@ export default function HomePage() {
 
           {/* Dynamic Movie Sections */}
           <div className="space-y-4 -mt-10 relative z-30">
-            {visibleSections.length > 0 ? (
+            {visibleSections.length > 0 && (
               visibleSections.map((sec) => (
                 <MovieSectionRow
                   key={sec.id}
@@ -107,14 +114,15 @@ export default function HomePage() {
                   onToast={showToast}
                 />
               ))
-            ) : (
-              <div className="max-w-4xl mx-auto my-12 p-8 text-center bg-white/5 rounded-2xl border border-white/10 space-y-3">
-                <Film className="w-10 h-10 text-[#e50914] mx-auto" />
-                <h3 className="text-lg font-semibold text-white">No sections currently visible</h3>
-                <p className="text-sm text-gray-400">
-                  Go to the Admin Panel to enable sections or add movies to sections.
-                </p>
-              </div>
+            )}
+
+            {/* Guaranteed All Movies & Latest Uploads Row */}
+            {movies.length > 0 && (
+              <MovieSectionRow
+                section={allMoviesSection}
+                movies={movies}
+                onToast={showToast}
+              />
             )}
           </div>
         </main>

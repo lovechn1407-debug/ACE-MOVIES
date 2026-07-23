@@ -9,10 +9,18 @@ export default function MovieSectionRow({ section, movies, onToast }) {
 
   if (!section || !section.visible) return null;
 
-  // Filter movies for this section (if sectionId matches or if movies are explicitly added to section)
-  const sectionMovies = (movies || []).filter(
-    (m) => String(m.sectionId) === String(section.id)
-  );
+  // Filter movies for this section (matches sectionId OR matches genre name)
+  const sectionMovies = (movies || []).filter((m) => {
+    if (section.id === 'sec-all-movies') return true;
+    if (m.sectionId && String(m.sectionId) === String(section.id)) return true;
+    
+    // Genre name matching fallback
+    if (Array.isArray(m.genres) && section.name) {
+      const secNameLower = section.name.toLowerCase();
+      return m.genres.some((g) => secNameLower.includes(g.toLowerCase()));
+    }
+    return false;
+  });
 
   if (sectionMovies.length === 0) return null;
 
