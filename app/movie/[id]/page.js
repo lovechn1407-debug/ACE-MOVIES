@@ -5,7 +5,7 @@ import { useParams, useRouter } from 'next/navigation';
 import Navbar from '@/components/Navbar';
 import Footer from '@/components/Footer';
 import ToastNotification from '@/components/ToastNotification';
-import { Play, Share2, Star, Clock, Globe, ArrowLeft, ExternalLink, Film, Shield } from 'lucide-react';
+import { Play, Share2, Star, Clock, Globe, ArrowLeft, ExternalLink, Film } from 'lucide-react';
 
 export default function MovieDetailPage() {
   const params = useParams();
@@ -22,15 +22,15 @@ export default function MovieDetailPage() {
   };
 
   useEffect(() => {
-    if (!params.id) return;
+    if (!params?.id) return;
     const fetchMovie = async () => {
       try {
         setLoading(true);
-        const res = await fetch(`/api/movies/${params.id}`, { cache: 'no-store' });
+        const res = await fetch(`/api/movies/${encodeURIComponent(params.id)}`, { cache: 'no-store' });
         if (!res.ok) throw new Error('Movie not found');
         const data = await res.json();
         setMovie(data.movie);
-        if (data.movie.playLink) {
+        if (data.movie && data.movie.playLink) {
           setActivePlayUrl(data.movie.playLink);
         }
       } catch (err) {
@@ -40,7 +40,7 @@ export default function MovieDetailPage() {
       }
     };
     fetchMovie();
-  }, [params.id]);
+  }, [params?.id]);
 
   const handleShare = () => {
     const shareUrl = window.location.href;
@@ -96,17 +96,19 @@ export default function MovieDetailPage() {
     });
   }
 
+  const backdropSrc = movie.backdrop || movie.poster || null;
+
   return (
     <div className="min-h-screen flex flex-col bg-[#08080c] text-white">
       <Navbar />
 
       <main className="flex-1 pt-24 pb-16">
         {/* Backdrop Cover Section */}
-        <div className="relative w-full min-h-[50vh] lg:min-h-[60vh] flex items-end pb-12 px-4 sm:px-8 lg:px-16 overflow-hidden bg-black">
-          {movie.backdrop && (
+        <div className="relative w-full min-h-[45vh] lg:min-h-[55vh] flex items-end pb-12 px-4 sm:px-8 lg:px-16 overflow-hidden bg-black">
+          {backdropSrc && (
             <div
-              className="absolute inset-0 bg-cover bg-center bg-no-repeat scale-105"
-              style={{ backgroundImage: `url(${movie.backdrop})` }}
+              className="absolute inset-0 bg-cover bg-center bg-no-repeat scale-105 opacity-50"
+              style={{ backgroundImage: `url(${backdropSrc})` }}
             >
               <div className="absolute inset-0 bg-gradient-to-t from-[#08080c] via-[#08080c]/70 to-transparent" />
               <div className="absolute inset-0 bg-gradient-to-r from-[#08080c] via-[#08080c]/80 to-transparent w-full md:w-2/3" />
@@ -260,12 +262,16 @@ export default function MovieDetailPage() {
           {/* Sidebar Poster & Meta Info */}
           <div className="space-y-6">
             <div className="rounded-2xl overflow-hidden border border-white/15 bg-[#12131a] p-4 space-y-4 shadow-xl">
-              {movie.poster && (
+              {movie.poster ? (
                 <img
                   src={movie.poster}
                   alt={movie.title}
                   className="w-full rounded-xl object-cover aspect-[2/3] shadow-md"
                 />
+              ) : (
+                <div className="w-full aspect-[2/3] bg-gray-900 rounded-xl flex items-center justify-center text-gray-500 text-sm">
+                  No Poster Image
+                </div>
               )}
 
               <div className="space-y-3 pt-2 text-xs">
@@ -274,7 +280,7 @@ export default function MovieDetailPage() {
                   <span className="font-semibold text-gray-200">{movie.releaseDate || movie.releaseYear}</span>
                 </div>
                 <div className="flex justify-between border-b border-white/10 pb-2">
-                  <span className="text-gray-400">TMDB Rating</span>
+                  <span className="text-gray-400">Rating</span>
                   <span className="font-semibold text-amber-400 flex items-center gap-1">
                     <Star className="w-3 h-3 fill-amber-400" />
                     {movie.rating}
@@ -286,7 +292,7 @@ export default function MovieDetailPage() {
                 </div>
                 <div className="flex justify-between pb-2">
                   <span className="text-gray-400">Endpoint ID</span>
-                  <span className="font-mono text-gray-400">{movie.id}</span>
+                  <span className="font-mono text-gray-400 truncate max-w-[120px]">{movie.id}</span>
                 </div>
               </div>
             </div>
