@@ -4,9 +4,11 @@ import { useState, useEffect } from 'react';
 import Navbar from '@/components/Navbar';
 import Footer from '@/components/Footer';
 import ToastNotification from '@/components/ToastNotification';
+import { auth, googleProvider, signInWithPopup, signOut, onAuthStateChanged } from '@/lib/firebase';
+import { checkAdminAuthorization, registerPrimaryAdmin } from '@/lib/db';
 import { 
   Shield, Layers, Film, Plus, Search, Check, Trash2, Edit, 
-  Share2, Sparkles, RefreshCw, Star, Crown, X, Server, Hash
+  Share2, Sparkles, RefreshCw, Star, Crown, X, Server, Hash, LogOut, LogIn
 } from 'lucide-react';
 
 export default function AdminPage() {
@@ -17,6 +19,12 @@ export default function AdminPage() {
   const [apiProvider, setApiProvider] = useState('auto'); // 'auto' | 'tmdb' | 'omdb'
   const [loading, setLoading] = useState(true);
   const [toastMessage, setToastMessage] = useState('');
+
+  // --- Firebase Auth State ---
+  const [authUser, setAuthUser] = useState(null);        // Firebase user object
+  const [authStatus, setAuthStatus] = useState('loading'); // 'loading' | 'unauthenticated' | 'unauthorized' | 'authorized'
+  const [authLoading, setAuthLoading] = useState(false);
+  const [registeredAdminEmail, setRegisteredAdminEmail] = useState(null);
 
   // Modals state
   const [showAddSectionModal, setShowAddSectionModal] = useState(false);
@@ -58,7 +66,64 @@ export default function AdminPage() {
 
   const showToast = (msg) => {
     setToastMessage(msg);
-    setTimeout(() => setToastMessage(''), 3000);
+    setTimeout(() => setToastMessage(''), 3500);
+  };
+
+  // --- Firebase Auth Listener ---
+  useEffect(() => {
+    const unsubscribe = onAuthStateChanged(auth, async (user) => {
+      if (!user) {
+        setAuthUser(null);
+        setAuthStatus('unauthenticated');
+        return;
+      }
+      setAuthUser(user);
+      const { authorized, adminConfig } = await checkAdminAuthorization(user);
+      if (authorized === 'first_time') {
+        // Register this user as primary admin
+        await registerPrimaryAdmin(user);
+        setAuthStatus('authorized');
+        showToast(`Welcome Admin! Your account (${user.email}) has been registered.`);
+      } else if (authorized === true) {
+        setAuthStatus('authorized');
+      } else {
+        setAuthStatus('unauthorized');
+        setRegisteredAdminEmail(adminConfig?.email || null);
+      }
+    });
+    return () => unsubscribe();
+  }, []);
+
+  // Fetch admin dashboard data only when authorized
+  useEffect(() => {
+    if (authStatus === 'authorized') {
+      fetchAdminData();
+    }
+  }, [authStatus]);
+
+  const handleGoogleSignIn = async () => {
+    setAuthLoading(true);
+    try {
+      await signInWithPopup(auth, googleProvider);
+    } catch (err) {
+      console.error('Google sign-in error:', err);
+      if (err.code !== 'auth/popup-closed-by-user') {
+        showToast('Sign-in failed. Please try again.');
+      }
+    } finally {
+      setAuthLoading(false);
+    }
+  };
+
+  const handleSignOut = async () => {
+    try {
+      await signOut(auth);
+      setAuthUser(null);
+      setAuthStatus('unauthenticated');
+      showToast('Signed out successfully.');
+    } catch (err) {
+      console.error('Sign out error:', err);
+    }
   };
 
   const fetchAdminData = async () => {
@@ -81,17 +146,14 @@ export default function AdminPage() {
       setApiProvider(setSetting.apiProvider || 'auto');
     } catch (err) {
       console.error('Error loading admin data:', err);
-    } fontally: {
+    } finally {
       setLoading(false);
     }
   };
 
-  useEffect(() => {
-    fetchAdminData();
-  }, []);
-
   // --- API PROVIDER SETTING HANDLER ---
   const handleUpdateApiProvider = async (newProvider) => {
+
     try {
       setApiProvider(newProvider);
       const res = await fetch('/api/settings', {
@@ -434,7 +496,104 @@ export default function AdminPage() {
     <div className="min-h-screen flex flex-col bg-[#08080c] text-white">
       <Navbar />
 
-      <main className="flex-1 max-w-7xl mx-auto px-4 sm:px-8 pt-28 pb-16 w-full space-y-8">
+      {/* ─── AUTH: Loading ─────────────────────────────────────────── */}
+      {authStatus === 'loading' && (
+        <main className="flex-1 flex flex-col items-center justify-center gap-4">
+          <div className="w-12 h-12 border-4 border-[#e50914] border-t-transparent rounded-full animate-spin" />
+          <p className="text-gray-400 text-sm">Checking authorization...</p>
+        </main>
+      )}
+
+      {/* ─── AUTH: Sign In Screen ──────────────────────────────────── */}
+      {authStatus === 'unauthenticated' && (
+        <main className="flex-1 flex flex-col items-center justify-center px-4 pt-20">
+          <div className="w-full max-w-md bg-white/5 border border-white/10 rounded-3xl p-8 sm:p-10 space-y-6 shadow-2xl backdrop-blur-sm">
+            {/* Logo */}
+            <div className="flex flex-col items-center gap-3">
+              <div className="w-16 h-16 rounded-2xl bg-gradient-to-br from-[#e50914] to-red-900 flex items-center justify-center shadow-xl shadow-red-900/50">
+                <Shield className="w-8 h-8 text-white" />
+              </div>
+              <div className="text-center">
+                <h1 className="text-2xl font-extrabold text-white tracking-wide">Admin Panel</h1>
+                <p className="text-xs text-gray-400 mt-1">ACE<span className="text-[#e50914]">MOVIES</span> · Restricted Access</p>
+              </div>
+            </div>
+
+            <div className="border-t border-white/10" />
+
+            <div className="space-y-3 text-center">
+              <p className="text-sm text-gray-300 leading-relaxed">
+                Sign in with your authorized Google account to access the Admin Management Panel.
+              </p>
+              <p className="text-xs text-gray-500">
+                The first account to sign in will be registered as the sole administrator.
+              </p>
+            </div>
+
+            {/* Google Sign-In Button */}
+            <button
+              id="google-signin-btn"
+              onClick={handleGoogleSignIn}
+              disabled={authLoading}
+              className="w-full flex items-center justify-center gap-3 px-6 py-3.5 rounded-xl bg-white text-gray-900 font-bold text-sm hover:bg-gray-100 transition-all shadow-lg disabled:opacity-60 disabled:cursor-not-allowed"
+            >
+              {authLoading ? (
+                <div className="w-5 h-5 border-2 border-gray-400 border-t-transparent rounded-full animate-spin" />
+              ) : (
+                <svg className="w-5 h-5" viewBox="0 0 24 24">
+                  <path fill="#4285F4" d="M22.56 12.25c0-.78-.07-1.53-.2-2.25H12v4.26h5.92c-.26 1.37-1.04 2.53-2.21 3.31v2.77h3.57c2.08-1.92 3.28-4.74 3.28-8.09z"/>
+                  <path fill="#34A853" d="M12 23c2.97 0 5.46-.98 7.28-2.66l-3.57-2.77c-.98.66-2.23 1.06-3.71 1.06-2.86 0-5.29-1.93-6.16-4.53H2.18v2.84C3.99 20.53 7.7 23 12 23z"/>
+                  <path fill="#FBBC05" d="M5.84 14.09c-.22-.66-.35-1.36-.35-2.09s.13-1.43.35-2.09V7.07H2.18C1.43 8.55 1 10.22 1 12s.43 3.45 1.18 4.93l2.85-2.22.81-.62z"/>
+                  <path fill="#EA4335" d="M12 5.38c1.62 0 3.06.56 4.21 1.64l3.15-3.15C17.45 2.09 14.97 1 12 1 7.7 1 3.99 3.47 2.18 7.07l3.66 2.84c.87-2.6 3.3-4.53 6.16-4.53z"/>
+                </svg>
+              )}
+              {authLoading ? 'Signing in...' : 'Sign in with Google'}
+            </button>
+
+            <p className="text-center text-[11px] text-gray-600">
+              By signing in, you agree to administrator terms of ACEMovies.
+            </p>
+          </div>
+        </main>
+      )}
+
+      {/* ─── AUTH: Unauthorized Account ────────────────────────────── */}
+      {authStatus === 'unauthorized' && (
+        <main className="flex-1 flex flex-col items-center justify-center px-4 pt-20">
+          <div className="w-full max-w-md bg-white/5 border border-red-500/20 rounded-3xl p-8 sm:p-10 space-y-6 shadow-2xl">
+            <div className="flex flex-col items-center gap-3">
+              <div className="w-16 h-16 rounded-full bg-red-900/30 border-2 border-red-500/40 flex items-center justify-center">
+                <Shield className="w-8 h-8 text-red-400" />
+              </div>
+              <div className="text-center">
+                <h1 className="text-xl font-extrabold text-red-400">Access Denied</h1>
+                <p className="text-xs text-gray-400 mt-1">This account is not authorized as Admin.</p>
+              </div>
+            </div>
+
+            <div className="bg-red-900/20 border border-red-500/20 rounded-xl p-4 space-y-1 text-sm text-center">
+              <p className="text-gray-300">Signed in as:</p>
+              <p className="font-bold text-white">{authUser?.email}</p>
+              {registeredAdminEmail && (
+                <p className="text-xs text-gray-500 pt-1">Only <span className="text-amber-400 font-semibold">{registeredAdminEmail}</span> is authorized.</p>
+              )}
+            </div>
+
+            <button
+              onClick={handleSignOut}
+              className="w-full flex items-center justify-center gap-2 px-6 py-3 rounded-xl bg-white/10 hover:bg-white/20 text-white font-semibold text-sm border border-white/10 transition-all"
+            >
+              <LogOut className="w-4 h-4" />
+              Sign Out &amp; Try Another Account
+            </button>
+          </div>
+        </main>
+      )}
+
+      {/* ─── AUTH: Authorized — Show Admin Dashboard ───────────────── */}
+      {authStatus === 'authorized' && (
+        <>
+        <main className="flex-1 max-w-7xl mx-auto px-4 sm:px-8 pt-28 pb-16 w-full space-y-8">
         
         {/* Header Title */}
         <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4 border-b border-white/10 pb-6">
@@ -447,7 +606,7 @@ export default function AdminPage() {
                 Admin Management Control
               </h1>
               <p className="text-xs text-gray-400">
-                Configure sections, add movies by IMDB ID or API search, customize play links & set Top 1 Hero movie.
+                Configure sections, add movies by IMDB ID or API search, customize play links &amp; set Top 1 Hero movie.
               </p>
             </div>
           </div>
@@ -468,6 +627,26 @@ export default function AdminPage() {
               </button>
             </div>
           )}
+
+          {/* Admin User Info + Sign Out */}
+          <div className="flex items-center gap-3">
+            {authUser && (
+              <div className="flex items-center gap-2 bg-white/5 border border-white/10 rounded-xl px-3 py-2">
+                {authUser.photoURL && (
+                  <img src={authUser.photoURL} alt={authUser.displayName} className="w-7 h-7 rounded-full border border-white/20" />
+                )}
+                <span className="text-xs text-gray-300 font-medium hidden sm:block max-w-[120px] truncate">{authUser.displayName || authUser.email}</span>
+              </div>
+            )}
+            <button
+              onClick={handleSignOut}
+              className="flex items-center gap-2 px-3.5 py-2 rounded-xl bg-white/5 hover:bg-white/10 border border-white/10 text-gray-300 hover:text-white text-xs font-semibold transition-all"
+              title="Sign Out"
+            >
+              <LogOut className="w-4 h-4" />
+              <span className="hidden sm:block">Sign Out</span>
+            </button>
+          </div>
         </div>
 
         {/* API Provider Selector Card */}
@@ -771,8 +950,6 @@ export default function AdminPage() {
           </div>
         )}
 
-      </main>
-
       {/* --- MODAL 1: ADD SECTION MODAL --- */}
       {showAddSectionModal && (
         <div className="fixed inset-0 z-50 bg-black/80 backdrop-blur-sm flex items-center justify-center p-4">
@@ -917,7 +1094,7 @@ export default function AdminPage() {
 
                 {/* Play Buttons Config */}
                 <div className="space-y-3 bg-black/40 p-4 rounded-xl border border-white/10">
-                  <h4 className="text-xs font-bold text-amber-400 uppercase tracking-wider">Configure Play Links & Custom Buttons</h4>
+                  <h4 className="text-xs font-bold text-amber-400 uppercase tracking-wider">Configure Play Links &amp; Custom Buttons</h4>
                   
                   <div>
                     <label className="block text-xs font-semibold text-gray-300 mb-1">Landscape Card Overlay Center Button</label>
@@ -998,7 +1175,7 @@ export default function AdminPage() {
                     type="submit"
                     className="px-6 py-2.5 rounded-xl bg-amber-600 text-white text-xs font-bold hover:bg-amber-700 shadow-lg"
                   >
-                    Save & Publish Movie
+                    Save &amp; Publish Movie
                   </button>
                 </div>
               </form>
@@ -1126,7 +1303,7 @@ export default function AdminPage() {
 
                 {/* Play Buttons Config */}
                 <div className="space-y-3 bg-black/40 p-4 rounded-xl border border-white/10">
-                  <h4 className="text-xs font-bold text-[#e50914] uppercase tracking-wider">Configure Play Links & Custom Buttons</h4>
+                  <h4 className="text-xs font-bold text-[#e50914] uppercase tracking-wider">Configure Play Links &amp; Custom Buttons</h4>
                   
                   <div>
                     <label className="block text-xs font-semibold text-gray-300 mb-1">Landscape Card Overlay Center Button</label>
@@ -1207,7 +1384,7 @@ export default function AdminPage() {
                     type="submit"
                     className="px-6 py-2.5 rounded-xl bg-[#e50914] text-white text-xs font-bold hover:bg-red-600 shadow-lg shadow-red-900/40"
                   >
-                    Save & Publish Movie
+                    Save &amp; Publish Movie
                   </button>
                 </div>
               </form>
@@ -1451,6 +1628,10 @@ export default function AdminPage() {
             </div>
           </div>
         </div>
+      )}
+
+        </main>
+        </>
       )}
 
       <Footer />

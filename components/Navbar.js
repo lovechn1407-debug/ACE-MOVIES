@@ -3,7 +3,7 @@
 import { useState, useEffect } from 'react';
 import Link from 'next/link';
 import { usePathname } from 'next/navigation';
-import { Film, Shield, Search, Menu, X } from 'lucide-react';
+import { Film, Search, Menu, X } from 'lucide-react';
 
 export default function Navbar({ onSearch }) {
   const [scrolled, setScrolled] = useState(false);
@@ -58,17 +58,6 @@ export default function Navbar({ onSearch }) {
           >
             Home
           </Link>
-          <Link
-            href="/admin"
-            className={`flex items-center gap-2 px-3.5 py-1.5 rounded-lg border transition-all ${
-              pathname.startsWith('/admin')
-                ? 'bg-[#e50914] border-[#e50914] text-white shadow-lg shadow-red-900/40'
-                : 'border-white/15 bg-white/5 hover:bg-white/10 text-gray-200'
-            }`}
-          >
-            <Shield className="w-4 h-4 text-[#e50914]" />
-            <span>Admin Panel</span>
-          </Link>
         </nav>
 
         {/* Search Bar & Mobile Menu Toggle */}
@@ -105,14 +94,6 @@ export default function Navbar({ onSearch }) {
             className="block py-2 text-base font-medium text-gray-200 hover:text-white"
           >
             Home
-          </Link>
-          <Link
-            href="/admin"
-            onClick={() => setMobileMenuOpen(false)}
-            className="flex items-center gap-2 py-2 text-base font-medium text-[#e50914]"
-          >
-            <Shield className="w-5 h-5" />
-            Admin Panel
           </Link>
         </div>
       )}
