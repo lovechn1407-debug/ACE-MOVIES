@@ -1,5 +1,6 @@
 {
-  "topHeroMovieId": "movie-2",
+  "topHeroMovieId": "movie-top-1",
+  "apiProvider": "auto",
   "sections": [
     {
       "id": "sec-trending",
@@ -19,7 +20,7 @@
     {
       "id": "sec-drama",
       "name": "Critically Acclaimed Dramas",
-      "visible": false
+      "visible": true
     }
   ],
   "movies": [
